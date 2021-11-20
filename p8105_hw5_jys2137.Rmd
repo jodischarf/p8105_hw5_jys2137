@@ -38,9 +38,9 @@ The purpose of this file is to present the answers to Homework 5, an assignment 
 * **1.2.** Raw data description
 * **1.3.** Data cleaning
 * **1.4.** Total number of homicides and unsolved homicides
-* **1.5.** Focusing on Baltimore, MD
+* **1.5.** Proportion of unsolved homicides in Baltimore
 * **1.6.** Running `prop.test` for each of the cities in the dataset
-* **1.5.** Creating a plot: Proportion of unsolved cases in 50 major US cities
+* **1.7.** Creating a plot: Proportion of unsolved cases in 50 major US cities
 
 
 **Problem 2**
@@ -66,7 +66,6 @@ This problem uses data on homicides in 50 large U.S. cities gathered by the _Was
 The code below imports the raw data made available through a GitHub repository.
 
 ```{r raw_import}
-# importing raw data from GitHub repository
 hom_url <- 'https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv'
 hom_read <- read_csv(url(hom_url), na = c(" ","Unknown", "NA"))
 ```
@@ -115,6 +114,8 @@ cities_df =
     n = n())
 ```
 
+#### 1.5. Proportion of unsolved homicides in Baltimore
+
 Focusing on the city of _Baltimore, MD_, we use the `prop.test` function to estimate the proportion of homicides that are unsolved and the `broom::tidy` function to pull the estimated proportion and confidence intervals from the resulting dataframe.
 
 ```{r}
@@ -131,14 +132,25 @@ baltimore_summary =
  baltimore_test =
    prop.test(
     x = baltimore_summary %>% pull(unsolved), 
-    n = baltimore_summary %>% pull(n))
-
+    n = baltimore_summary %>% pull(n)) 
+ 
+ 
 baltimore_test %>% 
   broom::tidy() %>% 
-  knitr::kable(digits = 4)
+  select(-parameter) %>% 
+  rename(Estimate = estimate,
+         Statistic = statistic,
+         Method = method,
+         Alternative = alternative,
+         "CI Lower Bound" = conf.low, 
+         "CI Upper Bound" = conf.high) %>% 
+  knitr::kable(digits = 3,
+               caption = "_**Table 1: Estimate and CI of the Proportion of Unsolved Homicides In Baltimore**_")
 ```
 
-Next, we run `prop.test` for each of the cities in the dataset, and extract both the proportion of unsolved homicides and the confidence interval for each. This is done within a “tidy” pipeline, making use of `purrr::map`, `purrr::map2`, and `unnest` as necessary to create a tidy dataframe with **estimated proportions** and **CIs* for each city.
+#### 1.6. Running `prop.test` for each of the cities in the dataset
+
+Next, we run `prop.test` for each of the cities in the dataset, and extract both the **proportion of unsolved homicides** and the **confidence interval** for each. This is done within a “tidy” pipeline, making use of `purrr::map`, `purrr::map2`, and `unnest`.
 
 ```{r}
 results_df = 
@@ -150,7 +162,9 @@ results_df =
   select(city_state, estimate, starts_with("conf"))
 ```
 
-The code chunk below creates a plot that shows the estimates and CIs for each city – and uses `geom_errorbar` to add error bars based on the upper and lower limits. Cities are organized according to the proportion of unsolved homicides.
+#### 1.7. Creating a plot: Proportion of unsolved cases in 50 major US cities
+
+The code chunk below creates a **plot** that shows the *estimates** and **CIs** for each city – and uses `geom_errorbar` to add error bars based on the upper and lower limits. Cities are organized according to the proportion of unsolved homicides.
 
 ```{r}
 results_df %>% 
@@ -167,3 +181,6 @@ results_df %>%
 ```
 
 _**Figure 1**_ illustrates that across the 50 major U.S. cities, rates at which homicides are solved vary greatly. Notably, **Chicago, IL** has a distinctly high proportion of unsolved homicides, at **over 0.7**. This unfortunately makes sense, as Chicago is a city with a high rate of homicides overall. In stark comparison, the lowest proportion of unsolved homicides is in **Richmond, VA**, at just above **0.25**.
+
+## Problem 2
+
