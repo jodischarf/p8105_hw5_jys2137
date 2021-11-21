@@ -48,13 +48,14 @@ The purpose of this file is to present the answers to Homework 5, an assignment 
 * **2.1.** Importing the data
 * **2.2.** Cleaning the data
 * **2.3.** Spaghetti plot of observations over time
+* **2.4.** A comment on differences between groups
+
 
 **Problem 3**
 
-* **3.1.** 
-* **3.2.** 
-* **3.3.** 
-* **3.4.** 
+* **3.1.** Loading in the `iris` dataset
+* **3.2.** Writing a function
+* **3.3.** Final checks
 
 ## Problem 1
 
@@ -191,7 +192,7 @@ _**Figure 1**_ illustrates that across the 50 major U.S. cities, rates at which 
 
 This problem involves data from a longitudinal study that included a control arm and an experimental arm. Data for each participant is included in a separate file, and file names include the `subject ID` and `arm`.
 
-#### 2.1 Importing the data
+#### 2.1. Importing the data
 First, we import the data from each separate file of the study through the following steps:
 
 * Create a dataframe `files_df` that includes the names of all 20 files and the path to each file using `list.files`
@@ -211,11 +212,11 @@ files_df =
 #### 2.2. Cleaning the data
 Now, we tidy the result of the previous data import through the following steps:
 
-* Manipulate the file name to include control arm and subject ID
+* Manipulate the file name to include `study arm` and subject ID (`subj_id`)
 * Use string replacements for the file names
 * Ensure weekly observations are tidy
-* Changing the dataframe from wide to long
-* De-selecting variables that are not meaningful for our understanding of the data
+* Change the dataframe from wide to long
+* De-select variables that are not meaningful for our understanding of the data
 
 ```{r}
 tidy_df = 
@@ -230,10 +231,12 @@ tidy_df =
   pivot_longer(
     week_1:week_8,
     names_to = "week",
-    values_to = "outcome",
+    values_to = "observations",
     names_prefix = "week_") %>% 
-  mutate(week = as.numeric(week)) %>% 
-  select(-subj_num, subj = files, week, outcome)
+  mutate(week = as.numeric(week),
+         study_arm = case_when(str_detect(files, "exp") ~ "Experiment",
+                               str_detect(files, "con") ~ "Control")) %>% 
+  select(study_arm, subj_num, subj = files, week, observations)
 ```
   
 #### 2.3. Spaghetti plot of observations over time
@@ -242,17 +245,84 @@ Here, we make a **spaghetti plot** showing observations on each subject over tim
 
 ```{r}
 tidy_df %>% 
-  ggplot(aes(x = week, y = outcome, group = subj, color = study_arm)) + 
+  ggplot(aes(x = week, y = observations, group = subj, color = subj_num)) + 
   geom_point() + 
   geom_path() + 
   theme(plot.title = element_text(face = "bold.italic" )) + 
   labs(x = "Study Week",
        y = "Observed Measurement", 
        title = "Figure 2: Control vs. Experimental Arm", 
-       color = "Study Arm") +
+       color = "Subject ID Number") +
   facet_grid(~study_arm)
 ```
 
-###### A comment on differences between groups:
+#### 2.4. A comment on differences between groups:
 
 Figure 2 illustrates a noticeable difference between groups. Subjects in the control group seem to stay rather consistent in their observed measurement over time, while subjects in the experimental group seem to have increasing observed measurements over time. 
+
+
+## Problem 3
+
+The purpose of this problem is to **fill in missing values** from the `iris` dataset.
+
+#### 3.1. Loading in the iris dataset
+
+The code chunk below **loads the iris dataset** from the tidyverse package and introduces some missing values in each column. 
+
+```{r}
+library(tidyverse)
+set.seed(10)
+
+iris_with_missing = iris %>% 
+  map_df(~replace(.x, sample(1:150, 20), NA)) %>%
+  mutate(Species = as.character(Species))
+```
+
+#### 3.2. Writing a function
+
+Now, we write a function that takes a **vector as an argument** and **replaces missing** values such that two cases are addressed:
+
+* For _numeric_ variables, missing values are filled in with the mean of non-missing values
+* For _character_ variables, missing values are filled in with with "virginica"
+
+The function subsequently returns the resulting vector.
+
+```{r}
+missing_func = function(x) {
+  
+    if (is.character(x)) {
+        x[is.na(x)] = "virginica"
+    } else if (is.numeric(x)) {
+        x[is.na(x)] = mean(x, na.rm = TRUE)
+    } else stop("Input should be a numeric or character value")
+  return(x)
+}
+```
+
+The chunk below applies the function created above to the columns of `iris_with_missing` using a `map` statement. A `for loop` is also used to iterate across each column.
+
+```{r}
+ for (i in 1:5) {
+    iris_with_missing[i] = map(iris_with_missing[i], ~missing_func(.x))
+  }
+```
+
+#### 3.3. Final checks
+
+To make sure missing has been replaced correctly, we are doing a check on the data frame to see if there are any rows with NA values in the dataframe.
+
+```{r}
+na_check =
+  iris_with_missing[rowSums(is.na(iris_with_missing)) > 0,]
+
+na_check
+```
+
+The dataframe looks like it does not include any more NA values. Finally, we can do a test of the new dataset.
+
+```{r}
+iris_with_missing %>%
+  head()
+```
+
+Great, no NA values to be found!
