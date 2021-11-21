@@ -82,7 +82,7 @@ The following code chunk **cleans the data** by:
 * creating a `resolution` variable indicating if a case was closed with or without arrest
 * excluding the 1 observation reported as being in _Tulsa, AL_
 
-```{r}
+```{r data_clean_1}
 homicide_df = 
   hom_read %>%
   mutate(
@@ -104,7 +104,7 @@ The next code chunk summarizes _**within cities**_ to obtain:
 1. The **total** number of homicides
 2. The number of **unsolved** homicides (those for which the disposition is “Closed without arrest” or “Open/No arrest”).
 
-```{r}
+```{r cities}
 cities_df = 
   homicide_df %>% 
   select(city_state, disposition, resolution) %>% 
@@ -122,7 +122,7 @@ knitr::kable(cities_df,
 
 Focusing on the city of _Baltimore, MD_, we use the `prop.test` function to estimate the proportion of homicides that are unsolved and the `broom::tidy` function to pull the estimated proportion and confidence intervals from the resulting dataframe.
 
-```{r}
+```{r baltimore}
 baltimore_df =
   homicide_df %>% 
   filter(city_state == "Baltimore, MD")
@@ -157,7 +157,7 @@ baltimore_test %>%
 
 Next, we run `prop.test` for each of the cities in the dataset, and extract both the **proportion of unsolved homicides** and the **confidence interval** for each. This is done within a “tidy” pipeline, making use of `purrr::map`, `purrr::map2`, and `unnest`.
 
-```{r}
+```{r prop.test}
 results_df = 
   cities_df %>% 
   mutate(test_results = map2(.x = unsolved, .y = n, ~prop.test(x = .x, n = .y)),
@@ -171,7 +171,7 @@ results_df =
 
 The code chunk below creates a **plot** that shows the *estimates** and **CIs** for each city – and uses `geom_errorbar` to add error bars based on the upper and lower limits. Cities are organized according to the proportion of unsolved homicides.
 
-```{r}
+```{r plot_1}
 results_df %>% 
   mutate(city_state = fct_reorder(city_state, estimate)) %>% 
   ggplot(aes(x = city_state, y = estimate)) + 
@@ -200,7 +200,7 @@ First, we import the data from each separate file of the study through the follo
 * Import data using `read_csv`
 * Use `unnest` to accommodate for the `map` results
 
-```{r}
+```{r data_import_2}
 files_df =
   tibble(
     files = list.files("./data/"),
@@ -218,7 +218,7 @@ Now, we tidy the result of the previous data import through the following steps:
 * Change the dataframe from wide to long
 * De-select variables that are not meaningful for our understanding of the data
 
-```{r}
+```{r clean_data_2}
 tidy_df = 
   files_df %>% 
   mutate(file_name = str_replace(files, ".csv", "")) %>% 
@@ -243,7 +243,7 @@ tidy_df =
 
 Here, we make a **spaghetti plot** showing observations on each subject over time. For clarity, the **control group** is shown on the _left_ and the **experimental group** is shown on the _right_.
 
-```{r}
+```{r spaghetti_plot}
 tidy_df %>% 
   ggplot(aes(x = week, y = observations, group = subj, color = subj_num)) + 
   geom_point() + 
@@ -269,7 +269,7 @@ The purpose of this problem is to **fill in missing values** from the `iris` dat
 
 The code chunk below **loads the iris dataset** from the tidyverse package and introduces some missing values in each column. 
 
-```{r}
+```{r load_iris}
 library(tidyverse)
 set.seed(10)
 
@@ -287,7 +287,7 @@ Now, we write a function that takes a **vector as an argument** and **replaces m
 
 The function subsequently returns the resulting vector.
 
-```{r}
+```{r function_write}
 missing_func = function(x) {
   
     if (is.character(x)) {
@@ -301,7 +301,7 @@ missing_func = function(x) {
 
 The chunk below applies the function created above to the columns of `iris_with_missing` using a `map` statement. A `for loop` is also used to iterate across each column.
 
-```{r}
+```{r function_map}
  for (i in 1:5) {
     iris_with_missing[i] = map(iris_with_missing[i], ~missing_func(.x))
   }
@@ -309,20 +309,20 @@ The chunk below applies the function created above to the columns of `iris_with_
 
 #### 3.3. Final checks
 
-To make sure missing has been replaced correctly, we are doing a check on the data frame to see if there are any rows with NA values in the dataframe.
+To make sure missing has been replaced correctly, we are conduct a **check** on the data frame to see if there are any **rows with NA values** in the dataframe.
 
-```{r}
-na_check =
+```{r missing_check}
+missing_check =
   iris_with_missing[rowSums(is.na(iris_with_missing)) > 0,]
 
-na_check
+missing_check
 ```
 
-The dataframe looks like it does not include any more NA values. Finally, we can do a test of the new dataset.
+The dataframe looks like it does not include any more missing values. Finally, we can do a **test of the updated dataset**.
 
-```{r}
+```{r final_check}
 iris_with_missing %>%
   head()
 ```
 
-Great, no NA values to be found!
+Great, no missing values are found in the updated dataset.
