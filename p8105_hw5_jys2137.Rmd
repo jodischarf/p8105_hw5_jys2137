@@ -45,10 +45,9 @@ The purpose of this file is to present the answers to Homework 5, an assignment 
 
 **Problem 2**
 
-* **2.1.** 
-* **2.2.** 
-* **2.3.** 
-* **2.4.** 
+* **2.1.** Importing the data
+* **2.2.** Cleaning the data
+* **2.3.** Spaghetti plot of observations over time
 
 **Problem 3**
 
@@ -112,6 +111,10 @@ cities_df =
   summarize(
     unsolved = sum(resolution == "unsolved"),
     n = n())
+
+knitr::kable(cities_df,
+             col.names = c("City", "Unsolved Murders", "Total Murders"))
+
 ```
 
 #### 1.5. Proportion of unsolved homicides in Baltimore
@@ -137,15 +140,16 @@ baltimore_summary =
  
 baltimore_test %>% 
   broom::tidy() %>% 
-  select(-parameter) %>% 
+  select(-parameter, -alternative) %>% 
   rename(Estimate = estimate,
          Statistic = statistic,
+         "p-value" = p.value,
          Method = method,
-         Alternative = alternative,
          "CI Lower Bound" = conf.low, 
          "CI Upper Bound" = conf.high) %>% 
   knitr::kable(digits = 3,
-               caption = "_**Table 1: Estimate and CI of the Proportion of Unsolved Homicides In Baltimore**_")
+               caption = "_**Table 1: Estimate and CI of the Proportion of Unsolved Homicides In Baltimore**_",
+               align = "ccccclc")
 ```
 
 #### 1.6. Running `prop.test` for each of the cities in the dataset
@@ -182,5 +186,73 @@ results_df %>%
 
 _**Figure 1**_ illustrates that across the 50 major U.S. cities, rates at which homicides are solved vary greatly. Notably, **Chicago, IL** has a distinctly high proportion of unsolved homicides, at **over 0.7**. This unfortunately makes sense, as Chicago is a city with a high rate of homicides overall. In stark comparison, the lowest proportion of unsolved homicides is in **Richmond, VA**, at just above **0.25**.
 
+
 ## Problem 2
 
+This problem involves data from a longitudinal study that included a control arm and an experimental arm. Data for each participant is included in a separate file, and file names include the `subject ID` and `arm`.
+
+#### 2.1 Importing the data
+First, we import the data from each separate file of the study through the following steps:
+
+* Create a dataframe `files_df` that includes the names of all 20 files and the path to each file using `list.files`
+* Use `purrr::map` for the paths and save the result as a new variable, `file_name`
+* Import data using `read_csv`
+* Use `unnest` to accommodate for the `map` results
+
+```{r}
+files_df =
+  tibble(
+    files = list.files("./data/"),
+    path = str_c("./data/", files)) %>% 
+    mutate(file_name = map(path, read_csv, col_types = "dddddddd")) %>% 
+    unnest()
+```
+
+#### 2.2. Cleaning the data
+Now, we tidy the result of the previous data import through the following steps:
+
+* Manipulate the file name to include control arm and subject ID
+* Use string replacements for the file names
+* Ensure weekly observations are tidy
+* Changing the dataframe from wide to long
+* De-selecting variables that are not meaningful for our understanding of the data
+
+```{r}
+tidy_df = 
+  files_df %>% 
+  mutate(file_name = str_replace(files, ".csv", "")) %>% 
+  mutate(file_name = str_replace(file_name, "./study_data/", "")) %>% 
+  separate(file_name,
+           into = c("study_arm", "subj_num"),
+           sep = "_",
+           remove = FALSE) %>% 
+  rename(subj_id = file_name) %>% 
+  pivot_longer(
+    week_1:week_8,
+    names_to = "week",
+    values_to = "outcome",
+    names_prefix = "week_") %>% 
+  mutate(week = as.numeric(week)) %>% 
+  select(-subj_num, subj = files, week, outcome)
+```
+  
+#### 2.3. Spaghetti plot of observations over time
+
+Here, we make a **spaghetti plot** showing observations on each subject over time. For clarity, the **control group** is shown on the _left_ and the **experimental group** is shown on the _right_.
+
+```{r}
+tidy_df %>% 
+  ggplot(aes(x = week, y = outcome, group = subj, color = study_arm)) + 
+  geom_point() + 
+  geom_path() + 
+  theme(plot.title = element_text(face = "bold.italic" )) + 
+  labs(x = "Study Week",
+       y = "Observed Measurement", 
+       title = "Figure 2: Control vs. Experimental Arm", 
+       color = "Study Arm") +
+  facet_grid(~study_arm)
+```
+
+###### A comment on differences between groups:
+
+Figure 2 illustrates a noticeable difference between groups. Subjects in the control group seem to stay rather consistent in their observed measurement over time, while subjects in the experimental group seem to have increasing observed measurements over time. 
