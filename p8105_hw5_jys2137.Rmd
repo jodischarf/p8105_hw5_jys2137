@@ -256,7 +256,7 @@ tidy_df %>%
   facet_grid(~study_arm)
 ```
 
-#### 2.4. A comment on differences between groups:
+#### 2.4. A comment on differences between groups
 
 Figure 2 illustrates a noticeable difference between groups. Subjects in the control group seem to stay rather consistent in their observed measurement over time, while subjects in the experimental group seem to have increasing observed measurements over time. 
 
